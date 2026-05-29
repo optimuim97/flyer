@@ -33,9 +33,20 @@ const Icon = {
       <path d="M13 5l7 7-7 7" />
     </svg>
   ),
+  sun: (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+    </svg>
+  ),
+  moon: (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  ),
 };
 
-export default function Sidebar({ onOpenQuote }) {
+export default function Sidebar({ onOpenQuote, theme, onToggleTheme }) {
   return (
     <aside className="sidebar">
       <div className="brand-row">
@@ -63,11 +74,11 @@ export default function Sidebar({ onOpenQuote }) {
               <span>{EMAIL}</span>
             </div>
           </a>
-          <a className="contact-link" href="https://questions.welely.com" target="_blank" rel="noreferrer">
+          <a className="contact-link" href="https://questions.softara.tech" target="_blank" rel="noreferrer">
             <span className="ci-ico">{Icon.link}</span>
             <div>
               <b>welely</b>
-              <span>questions.welely.com</span>
+              <span>questions.softara.tech</span>
             </div>
           </a>
         </div>
@@ -89,7 +100,13 @@ export default function Sidebar({ onOpenQuote }) {
         Demander un devis {Icon.arrow}
       </button>
 
-      <div className="sb-footer">© {new Date().getFullYear()} softara</div>
+      <div className="sb-footer">
+        <span>© {new Date().getFullYear()} softara</span>
+        <button className="theme-toggle" onClick={onToggleTheme} title="Changer de thème">
+          {theme === "dark" ? Icon.sun : Icon.moon}
+          {theme === "dark" ? "Light" : "Dark"}
+        </button>
+      </div>
     </aside>
   );
 }

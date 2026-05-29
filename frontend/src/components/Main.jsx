@@ -75,7 +75,7 @@ export default function Main({ onOpenQuote }) {
 
       <div className="main-foot">
         <span>© {new Date().getFullYear()} Softara</span>
-        <a href="https://questions.welely.com" target="_blank" rel="noreferrer">questions.welely.com →</a>
+        <a href="https://questions.softara.tech" target="_blank" rel="noreferrer">questions.softara.tech →</a>
       </div>
     </main>
   );
