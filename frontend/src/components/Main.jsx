@@ -50,7 +50,7 @@ export default function Main({ onOpenQuote }) {
             Demander un devis
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M13 5l7 7-7 7"/></svg>
           </button>
-          <a className="btn btn-whatsapp" href="https://wa.me/2250000000000" target="_blank" rel="noreferrer">
+          <a className="btn btn-whatsapp" href="https://wa.me/2250779920203" target="_blank" rel="noreferrer">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 3.5A11 11 0 0 0 3.3 17l-1.3 4.8 4.9-1.3a11 11 0 0 0 16.7-9.3 11 11 0 0 0-3.1-7.7Z"/></svg>
             WhatsApp
           </a>
