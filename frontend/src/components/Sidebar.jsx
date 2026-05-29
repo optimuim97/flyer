@@ -74,7 +74,7 @@ export default function Sidebar({ onOpenQuote, theme, onToggleTheme }) {
               <span>{EMAIL}</span>
             </div>
           </a>
-          <a className="contact-link" href="questions.softara.tech/q/1" target="_blank" rel="noreferrer">
+          <a className="contact-link" href="https://questions.softara.tech/q/1" target="_blank" rel="noreferrer">
             <span className="ci-ico">{Icon.link}</span>
             <div>
               <b>softra e-commerce questions</b>
