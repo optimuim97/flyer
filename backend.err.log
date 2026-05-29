@@ -1,0 +1,16 @@
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:6060
+ * Running on http://172.20.10.4:6060
+Press CTRL+C to quit
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 764-983-021
+ * Detected change in 'C:\\Users\\sidik\\Documents\\Softara\\backend\\app.py', reloading
+ * Restarting with stat
+Traceback (most recent call last):
+  File "C:\Users\sidik\Documents\Softara\backend\app.py", line 7, in <module>
+    from models import db, ProjectType, Feature, Quotation
+  File "C:\Users\sidik\Documents\Softara\backend\models.py", line 2, in <module>
+    from flask_sqlalchemy import SQLAlchemy
+ModuleNotFoundError: No module named 'flask_sqlalchemy'

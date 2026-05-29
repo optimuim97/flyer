@@ -1,0 +1,44 @@
+services:
+  softara:
+    build: .
+    image: softara:latest
+    container_name: softara-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: sqlite:////app/backend/data/softara.db
+      SOFTARA_CONTACT_EMAIL: ${SOFTARA_CONTACT_EMAIL:-assidikouattara@gmail.com}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+    volumes:
+      - softara-data:/app/backend/data
+    expose:
+      - "6060"
+    networks:
+      - web
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: softara-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - softara
+    networks:
+      - web
+
+volumes:
+  softara-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  web:
+    driver: bridge
