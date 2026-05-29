@@ -53,7 +53,7 @@ export default function Sidebar({ onOpenQuote }) {
             <span className="ci-ico">{Icon.whatsapp}</span>
             <div>
               <b>whatsapp</b>
-              <span>+225 {{ WHATSAPP_NUMBER }}</span>
+              <span>+225 07 79 92 02 03</span>
             </div>
           </a>
           <a className="contact-link" href={`mailto:${EMAIL}`}>
