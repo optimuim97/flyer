@@ -236,13 +236,6 @@ def create_app():
             reply_to=email,
         )
 
-        # Envoi mail en arriere-plan -> la requete repond immediatement
-        _send_mail_async(
-            subject=f"[Softara] Devis #{q.id} - {name}",
-            body=body,
-            reply_to='contact@softara.tech',
-        )
-
         # Reponse client — meme si le mail echoue plus tard, le devis est sauvegarde
         try:
             payload = q.to_dict()
