@@ -78,10 +78,14 @@ button { font: inherit; cursor: pointer; }
   gap: 24px;
 }
 
-.brand-row { display: flex; flex-direction: column; gap: 6px; }
+.brand-row { display: flex; flex-direction: column; gap: 6px; min-width: 0; color: var(--text); }
 .brand-logo {
-  height: 38px; width: auto;
-  object-fit: contain; object-position: left;
+  display: block;
+  height: 72px;
+  width: auto;
+  max-width: 280px;
+  user-select: none;
+  margin-left: -3.2rem;
 }
 .brand-row .tag {
   font-size: .7rem; color: var(--muted);

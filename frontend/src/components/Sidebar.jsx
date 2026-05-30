@@ -9,6 +9,36 @@ const SERVICES = [
   "Support & maintenance",
 ];
 
+const Logo = () => (
+  // Wordmark "S" + "oftara" inline, baseline alignée. "oftara" hérite de currentColor.
+  <svg className="brand-logo" viewBox="0 0 360 140" xmlns="http://www.w3.org/2000/svg" aria-label="Softara">
+    {/* Bracket haut-droit */}
+    <line x1="350" y1="18" x2="342" y2="18" stroke="#DB9200" strokeWidth="1.5" opacity="0.85"/>
+    <line x1="350" y1="18" x2="350" y2="26" stroke="#DB9200" strokeWidth="1.5" opacity="0.85"/>
+    {/* Bracket bas-gauche */}
+    <line x1="10" y1="122" x2="18" y2="122" stroke="#DB9200" strokeWidth="1.5" opacity="0.85"/>
+    <line x1="10" y1="122" x2="10" y2="114" stroke="#DB9200" strokeWidth="1.5" opacity="0.85"/>
+
+    {/* S mark — gros, à gauche */}
+    <g transform="translate(20, 25)">
+      <path
+        d="M 80 16 Q 80 5 64 5 L 20 5 Q 4 5 4 20 Q 4 34 20 38 L 60 47 Q 80 52 80 70 Q 80 85 64 85 L 20 85 Q 4 85 4 74"
+        fill="none" stroke="#DB9200" strokeWidth="9" strokeLinecap="round"
+      />
+      <circle cx="80" cy="16" r="5" fill="#DB9200"/>
+      <circle cx="4"  cy="20" r="5" fill="#DB9200"/>
+      <circle cx="80" cy="70" r="5" fill="#DB9200"/>
+      <circle cx="4"  cy="74" r="5" fill="#DB9200"/>
+    </g>
+
+    {/* "oftara" inline à droite du S, même baseline */}
+    <text x="110" y="100" fontFamily="Fira Code, ui-monospace, monospace" fontSize="72" fontWeight="600" fill="currentColor">oftara</text>
+
+    {/* "TECH" sous "oftara", centré */}
+    <text x="225" y="128" fontFamily="Fira Code, ui-monospace, monospace" fontSize="10" fontWeight="500" fill="#DB9200" letterSpacing="8" textAnchor="middle">TECH</text>
+  </svg>
+);
+
 const Icon = {
   whatsapp: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -50,11 +80,7 @@ export default function Sidebar({ onOpenQuote, theme, onToggleTheme }) {
   return (
     <aside className="sidebar">
       <div className="brand-row">
-        <img
-          src={theme === "dark" ? "/images/softara-logo-light.svg" : "/images/softara-logo-transparent.svg"}
-          alt="Softara"
-          className="brand-logo"
-        />
+        <Logo />
         <div className="tag">software · sécurité</div>
       </div>
 
