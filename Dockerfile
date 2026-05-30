@@ -36,4 +36,13 @@ WORKDIR /app/backend
 EXPOSE 6060
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["gunicorn", "--bind", "0.0.0.0:6060", "--workers", "2", "--access-logfile", "-", "app:create_app()"]
+CMD ["gunicorn", \
+     "--bind", "0.0.0.0:6060", \
+     "--workers", "2", \
+     "--threads", "4", \
+     "--timeout", "60", \
+     "--graceful-timeout", "30", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-", \
+     "--log-level", "info", \
+     "app:create_app()"]
