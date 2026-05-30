@@ -78,16 +78,10 @@ button { font: inherit; cursor: pointer; }
   gap: 24px;
 }
 
-.brand-row { display: flex; align-items: center; gap: 12px; }
-.brand-mark {
-  width: 40px; height: 40px; border-radius: 10px;
-  background: linear-gradient(135deg, rgba(108,140,255,.85), rgba(219,146,0,.85));
-  display: grid; place-items: center;
-  color: white; font-weight: 700; font-size: 1.1rem;
-}
-.brand-row .name {
-  font-weight: 700; font-size: 1.3rem;
-  letter-spacing: -0.01em; color: var(--text);
+.brand-row { display: flex; flex-direction: column; gap: 6px; }
+.brand-logo {
+  height: 38px; width: auto;
+  object-fit: contain; object-position: left;
 }
 .brand-row .tag {
   font-size: .7rem; color: var(--muted);

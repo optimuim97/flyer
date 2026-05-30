@@ -50,11 +50,12 @@ export default function Sidebar({ onOpenQuote, theme, onToggleTheme }) {
   return (
     <aside className="sidebar">
       <div className="brand-row">
-        <span className="brand-mark">S</span>
-        <div>
-          <div className="name">Softara</div>
-          <div className="tag">software · sécurité</div>
-        </div>
+        <img
+          src={theme === "dark" ? "/images/softara-logo-light.svg" : "/images/softara-logo-transparent.svg"}
+          alt="Softara"
+          className="brand-logo"
+        />
+        <div className="tag">software · sécurité</div>
       </div>
 
       <div className="sb-section">
