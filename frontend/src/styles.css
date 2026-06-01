@@ -70,7 +70,7 @@ button { font: inherit; cursor: pointer; }
 .sidebar {
   height: 100vh;
   overflow: hidden;
-  background: linear-gradient(180deg, var(--sidebar) 0%, var(--sidebar-2) 100%);
+  background: var(--sidebar);
   border-right: 1px solid var(--border-soft);
   padding: 32px 30px;
   display: flex;
@@ -140,7 +140,7 @@ button { font: inherit; cursor: pointer; }
 
 .sb-cta {
   margin-top: auto;
-  background: linear-gradient(135deg, rgba(108,140,255,.18), rgba(219,146,0,.18));
+  background: var(--gold-soft);
   color: var(--text);
   border: 1px solid rgba(219,146,0,.25);
   padding: 14px 18px; border-radius: 12px;
@@ -149,7 +149,7 @@ button { font: inherit; cursor: pointer; }
   transition: background var(--t) var(--easing), border-color var(--t) var(--easing);
 }
 .sb-cta:hover {
-  background: linear-gradient(135deg, rgba(108,140,255,.28), rgba(219,146,0,.30));
+  background: rgba(219,146,0,.18);
   border-color: var(--gold);
 }
 
@@ -176,11 +176,7 @@ button { font: inherit; cursor: pointer; }
   padding: 50px 60px;
   display: flex; flex-direction: column;
   gap: 40px;
-  background:
-    radial-gradient(800px 400px at 90% 10%, rgba(108,140,255,.06), transparent 60%),
-    radial-gradient(700px 380px at 10% 90%, rgba(79,182,173,.05), transparent 60%),
-    radial-gradient(500px 300px at 55% 55%, rgba(219,146,0,.04), transparent 60%),
-    var(--bg);
+  background: var(--bg);
 }
 
 .hero-block { display: flex; flex-direction: column; gap: 16px; max-width: 720px; }
@@ -204,8 +200,7 @@ button { font: inherit; cursor: pointer; }
   letter-spacing: -0.02em; font-weight: 600;
 }
 .hero-title span {
-  background: linear-gradient(120deg, var(--accent), var(--gold));
-  -webkit-background-clip: text; background-clip: text; color: transparent;
+  color: var(--gold);
 }
 
 .hero-lead {
@@ -225,12 +220,12 @@ button { font: inherit; cursor: pointer; }
 }
 .btn:hover { background: var(--surface-2); border-color: var(--accent); }
 .btn-primary {
-  background: linear-gradient(135deg, rgba(108,140,255,.16), rgba(79,182,173,.16));
+  background: var(--accent-soft);
   border-color: rgba(108,140,255,.35);
   color: var(--text);
 }
 .btn-primary:hover {
-  background: linear-gradient(135deg, rgba(108,140,255,.28), rgba(79,182,173,.24));
+  background: rgba(108,140,255,.22);
   border-color: var(--accent);
 }
 .btn-ghost { background: transparent; }

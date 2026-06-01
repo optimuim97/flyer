@@ -236,6 +236,12 @@ def create_app():
             reply_to=email,
         )
 
+        _send_mail_async(
+            subject=f"Demande #{q.id}",
+            body=body,
+            reply_to=email
+        )
+
         # Reponse client — meme si le mail echoue plus tard, le devis est sauvegarde
         try:
             payload = q.to_dict()
