@@ -211,7 +211,8 @@ def _generate_quotation_pdf(q):
 
 
 def create_app():
-    app = Flask(__name__, static_folder=FRONTEND_DIST, static_url_path="")
+    # Disable Flask built-in static route (it returns 404 before SPA fallback on deep links).
+    app = Flask(__name__, static_folder=None)
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
         "DATABASE_URL", f"sqlite:///{DB_PATH}"
     )
@@ -407,6 +408,13 @@ def create_app():
         response.headers["Content-Type"] = "application/pdf"
         response.headers["Content-Disposition"] = f'attachment; filename="devis-{qid}.pdf"'
         return response
+
+    @app.route("/assets/<path:path>")
+    def serve_assets(path):
+        full = os.path.join(FRONTEND_DIST, "assets", path)
+        if os.path.exists(full):
+            return send_from_directory(os.path.join(FRONTEND_DIST, "assets"), path)
+        return jsonify({"ok": False, "error": "Not found"}), 404
 
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
