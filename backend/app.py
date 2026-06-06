@@ -3,11 +3,16 @@ from __future__ import annotations
 import os
 import sys
 import logging
+import secrets
 import smtplib
 import threading
 import traceback
+from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
-from flask import Flask, request, jsonify, send_from_directory
+from functools import wraps
+
+import jwt
+from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 
 from models import db, ProjectType, Feature, Quotation
@@ -28,6 +33,11 @@ FRONTEND_DIST = os.path.abspath(
 DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "softara.db"))
 
 CONTACT_EMAIL = os.environ.get("SOFTARA_CONTACT_EMAIL", "contact@softara.tech")
+
+ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
+ADMIN_PASS = os.environ.get("ADMIN_PASS", "changeme")
+# Random per restart in dev; set ADMIN_SECRET in prod so tokens survive restarts.
+ADMIN_SECRET = os.environ.get("ADMIN_SECRET") or secrets.token_hex(32)
 SMTP_HOST = os.environ.get("SMTP_HOST")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "465"))
 SMTP_USER = os.environ.get("SMTP_USER")
@@ -91,6 +101,113 @@ def _send_mail_async(subject, body, reply_to=None):
         except Exception:
             logger.exception("Thread mail crashe")
     threading.Thread(target=_run, daemon=True, name="softara-mail").start()
+
+
+def require_admin(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.headers.get("Authorization", "")
+        if not auth.startswith("Bearer "):
+            return jsonify({"ok": False, "error": "Non autorise"}), 401
+        token = auth[7:]
+        try:
+            jwt.decode(token, ADMIN_SECRET, algorithms=["HS256"])
+        except jwt.ExpiredSignatureError:
+            return jsonify({"ok": False, "error": "Session expiree"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"ok": False, "error": "Token invalide"}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+
+def _generate_quotation_pdf(q):
+    from fpdf import FPDF
+
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_margins(20, 20, 20)
+
+    # Header
+    pdf.set_font("Helvetica", "B", 22)
+    pdf.set_text_color(219, 146, 0)
+    pdf.cell(0, 12, "SOFTARA TECH", ln=True, align="C")
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_text_color(120, 120, 120)
+    pdf.cell(0, 6, "Agence de developpement logiciel", ln=True, align="C")
+    pdf.ln(6)
+
+    # Title
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.set_text_color(30, 30, 30)
+    pdf.cell(0, 10, f"Demande de devis #{q.id}", ln=True)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.set_text_color(120, 120, 120)
+    pdf.cell(0, 5, f"Date : {q.created_at.strftime('%d/%m/%Y %H:%M')}", ln=True)
+    pdf.cell(0, 5, f"Statut : {q.status}", ln=True)
+    pdf.ln(6)
+
+    # Separator
+    pdf.set_draw_color(219, 146, 0)
+    pdf.set_line_width(0.5)
+    pdf.line(20, pdf.get_y(), 190, pdf.get_y())
+    pdf.ln(8)
+
+    def section(title):
+        pdf.set_font("Helvetica", "B", 13)
+        pdf.set_text_color(30, 30, 30)
+        pdf.cell(0, 8, title, ln=True)
+        pdf.ln(2)
+
+    def row(label, value):
+        if value:
+            pdf.set_font("Helvetica", "B", 10)
+            pdf.set_text_color(80, 80, 80)
+            pdf.cell(55, 6, f"{label} :", ln=False)
+            pdf.set_font("Helvetica", "", 10)
+            pdf.set_text_color(30, 30, 30)
+            # encode to latin-1, replace unknown chars
+            safe = str(value).encode("latin-1", errors="replace").decode("latin-1")
+            pdf.cell(0, 6, safe, ln=True)
+
+    section("Informations client")
+    row("Nom", q.name)
+    row("Email", q.email)
+    row("Telephone", q.phone)
+    row("Societe", q.company)
+    pdf.ln(6)
+
+    section("Details du projet")
+    row("Type de projet", q.project_type.name if q.project_type else "-")
+    row("Budget", q.budget)
+    row("Delai souhaite", q.deadline)
+    pdf.ln(6)
+
+    if q.features:
+        section("Fonctionnalites souhaitees")
+        pdf.set_font("Helvetica", "", 10)
+        pdf.set_text_color(50, 50, 50)
+        for f in q.features:
+            safe = f.name.encode("latin-1", errors="replace").decode("latin-1")
+            pdf.cell(8, 6, "-", ln=False)
+            pdf.cell(0, 6, safe, ln=True)
+        pdf.ln(6)
+
+    if q.description:
+        section("Description")
+        pdf.set_font("Helvetica", "", 10)
+        pdf.set_text_color(50, 50, 50)
+        safe_desc = q.description.encode("latin-1", errors="replace").decode("latin-1")
+        pdf.multi_cell(0, 6, safe_desc)
+        pdf.ln(4)
+
+    # Footer
+    pdf.set_y(-18)
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.set_text_color(160, 160, 160)
+    pdf.cell(0, 5, "Softara Tech  |  contact@softara.tech  |  softara.tech", align="C")
+
+    return bytes(pdf.output())
 
 
 def create_app():
@@ -255,6 +372,41 @@ def create_app():
     def list_quotations():
         rows = Quotation.query.order_by(Quotation.created_at.desc()).all()
         return jsonify([r.to_dict() for r in rows])
+
+    # ============================================================
+    # Admin API (JWT-protected)
+    # ============================================================
+    @app.post("/api/admin/login")
+    def admin_login():
+        data = request.get_json(silent=True) or {}
+        username = (data.get("username") or "").strip()
+        password = (data.get("password") or "").strip()
+        if username != ADMIN_USER or not password or password != ADMIN_PASS:
+            logger.warning("Tentative connexion admin echouee pour user=%r", username)
+            return jsonify({"ok": False, "error": "Identifiants incorrects"}), 401
+        token = jwt.encode(
+            {"sub": username, "exp": datetime.now(timezone.utc) + timedelta(hours=8)},
+            ADMIN_SECRET,
+            algorithm="HS256",
+        )
+        logger.info("Admin connecte : %s", username)
+        return jsonify({"ok": True, "token": token})
+
+    @app.get("/api/admin/quotations")
+    @require_admin
+    def admin_list_quotations():
+        rows = Quotation.query.order_by(Quotation.created_at.desc()).all()
+        return jsonify([r.to_dict() for r in rows])
+
+    @app.get("/api/admin/quotations/<int:qid>/pdf")
+    @require_admin
+    def admin_download_quotation(qid):
+        q = Quotation.query.get_or_404(qid)
+        pdf_bytes = _generate_quotation_pdf(q)
+        response = make_response(pdf_bytes)
+        response.headers["Content-Type"] = "application/pdf"
+        response.headers["Content-Disposition"] = f'attachment; filename="devis-{qid}.pdf"'
+        return response
 
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
