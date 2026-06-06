@@ -1,5 +1,10 @@
+import secrets
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
+
+
+def _new_access_token():
+    return secrets.token_urlsafe(24)
 
 db = SQLAlchemy()
 
@@ -62,12 +67,13 @@ class Quotation(db.Model):
     deadline = db.Column(db.String(80))
     status = db.Column(db.String(40), default="nouveau", nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    access_token = db.Column(db.String(64), default=_new_access_token, nullable=False, index=True)
 
     project_type = db.relationship("ProjectType")
     features = db.relationship("Feature", secondary=quotation_features, lazy="joined")
 
-    def to_dict(self):
-        return {
+    def to_dict(self, include_token=False):
+        d = {
             "id": self.id,
             "name": self.name,
             "email": self.email,
@@ -81,3 +87,6 @@ class Quotation(db.Model):
             "features": [f.to_dict() for f in self.features],
             "created_at": self.created_at.isoformat(),
         }
+        if include_token:
+            d["access_token"] = self.access_token
+        return d

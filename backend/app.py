@@ -15,7 +15,9 @@ import jwt
 from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 
-from models import db, ProjectType, Feature, Quotation
+from sqlalchemy import text as sa_text
+
+from models import db, ProjectType, Feature, Quotation, _new_access_token
 
 # ============================================================
 # Logging — vers stdout/stderr pour etre vu dans docker compose logs
@@ -103,6 +105,37 @@ def _send_mail_async(subject, body, reply_to=None):
     threading.Thread(target=_run, daemon=True, name="softara-mail").start()
 
 
+def _migrate_access_token():
+    """Ajoute la colonne access_token et backfill les lignes existantes (SQLite)."""
+    try:
+        cols = [r[1] for r in db.session.execute(sa_text("PRAGMA table_info(quotations)")).fetchall()]
+        if "access_token" not in cols:
+            logger.info("Migration : ajout de quotations.access_token")
+            db.session.execute(sa_text("ALTER TABLE quotations ADD COLUMN access_token VARCHAR(64)"))
+            db.session.commit()
+        # Backfill
+        missing = Quotation.query.filter(
+            (Quotation.access_token == None) | (Quotation.access_token == "")  # noqa: E711
+        ).all()
+        if missing:
+            logger.info("Backfill access_token pour %d devis", len(missing))
+            for q in missing:
+                q.access_token = _new_access_token()
+            db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("Migration access_token echouee")
+
+
+def _pdf_response(q, qid):
+    pdf_bytes = _generate_quotation_pdf(q)
+    response = make_response(pdf_bytes)
+    response.headers["Content-Type"] = "application/pdf"
+    response.headers["Content-Disposition"] = f'attachment; filename="devis-{qid}.pdf"'
+    response.headers["Content-Length"] = str(len(pdf_bytes))
+    return response
+
+
 def require_admin(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -120,32 +153,41 @@ def require_admin(f):
     return decorated
 
 
+def _latin(s):
+    if s is None:
+        return ""
+    return str(s).encode("latin-1", errors="replace").decode("latin-1")
+
+
 def _generate_quotation_pdf(q):
     from fpdf import FPDF
+    from fpdf.enums import XPos, YPos
+
+    NEXT_LINE = {"new_x": XPos.LMARGIN, "new_y": YPos.NEXT}
 
     pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_auto_page_break(auto=True, margin=18)
     pdf.add_page()
     pdf.set_margins(20, 20, 20)
 
     # Header
     pdf.set_font("Helvetica", "B", 22)
     pdf.set_text_color(219, 146, 0)
-    pdf.cell(0, 12, "SOFTARA TECH", ln=True, align="C")
+    pdf.cell(0, 12, "SOFTARA TECH", align="C", **NEXT_LINE)
     pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(120, 120, 120)
-    pdf.cell(0, 6, "Agence de developpement logiciel", ln=True, align="C")
+    pdf.cell(0, 6, _latin("Agence de developpement logiciel"), align="C", **NEXT_LINE)
     pdf.ln(6)
 
     # Title
     pdf.set_font("Helvetica", "B", 16)
     pdf.set_text_color(30, 30, 30)
-    pdf.cell(0, 10, f"Demande de devis #{q.id}", ln=True)
+    pdf.cell(0, 10, _latin(f"Demande de devis #{q.id}"), **NEXT_LINE)
     pdf.set_font("Helvetica", "", 10)
     pdf.set_text_color(120, 120, 120)
-    pdf.cell(0, 5, f"Date : {q.created_at.strftime('%d/%m/%Y %H:%M')}", ln=True)
-    pdf.cell(0, 5, f"Statut : {q.status}", ln=True)
-    pdf.ln(6)
+    pdf.cell(0, 5, _latin(f"Date : {q.created_at.strftime('%d/%m/%Y %H:%M')}"), **NEXT_LINE)
+    pdf.cell(0, 5, _latin(f"Statut : {q.status}"), **NEXT_LINE)
+    pdf.ln(4)
 
     # Separator
     pdf.set_draw_color(219, 146, 0)
@@ -156,58 +198,56 @@ def _generate_quotation_pdf(q):
     def section(title):
         pdf.set_font("Helvetica", "B", 13)
         pdf.set_text_color(30, 30, 30)
-        pdf.cell(0, 8, title, ln=True)
-        pdf.ln(2)
+        pdf.cell(0, 8, _latin(title), **NEXT_LINE)
+        pdf.ln(1)
 
     def row(label, value):
-        if value:
-            pdf.set_font("Helvetica", "B", 10)
-            pdf.set_text_color(80, 80, 80)
-            pdf.cell(55, 6, f"{label} :", ln=False)
-            pdf.set_font("Helvetica", "", 10)
-            pdf.set_text_color(30, 30, 30)
-            # encode to latin-1, replace unknown chars
-            safe = str(value).encode("latin-1", errors="replace").decode("latin-1")
-            pdf.cell(0, 6, safe, ln=True)
+        if not value:
+            return
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.set_text_color(80, 80, 80)
+        pdf.cell(55, 6, _latin(f"{label} :"))
+        pdf.set_font("Helvetica", "", 10)
+        pdf.set_text_color(30, 30, 30)
+        pdf.cell(0, 6, _latin(value), **NEXT_LINE)
 
     section("Informations client")
     row("Nom", q.name)
     row("Email", q.email)
     row("Telephone", q.phone)
     row("Societe", q.company)
-    pdf.ln(6)
+    pdf.ln(4)
 
     section("Details du projet")
     row("Type de projet", q.project_type.name if q.project_type else "-")
     row("Budget", q.budget)
     row("Delai souhaite", q.deadline)
-    pdf.ln(6)
+    pdf.ln(4)
 
     if q.features:
         section("Fonctionnalites souhaitees")
         pdf.set_font("Helvetica", "", 10)
         pdf.set_text_color(50, 50, 50)
         for f in q.features:
-            safe = f.name.encode("latin-1", errors="replace").decode("latin-1")
-            pdf.cell(8, 6, "-", ln=False)
-            pdf.cell(0, 6, safe, ln=True)
-        pdf.ln(6)
+            pdf.cell(8, 6, "-")
+            pdf.cell(0, 6, _latin(f.name), **NEXT_LINE)
+        pdf.ln(4)
 
     if q.description:
         section("Description")
         pdf.set_font("Helvetica", "", 10)
         pdf.set_text_color(50, 50, 50)
-        safe_desc = q.description.encode("latin-1", errors="replace").decode("latin-1")
-        pdf.multi_cell(0, 6, safe_desc)
-        pdf.ln(4)
+        pdf.multi_cell(0, 6, _latin(q.description))
+        pdf.ln(2)
 
     # Footer
     pdf.set_y(-18)
     pdf.set_font("Helvetica", "I", 8)
     pdf.set_text_color(160, 160, 160)
-    pdf.cell(0, 5, "Softara Tech  |  contact@softara.tech  |  softara.tech", align="C")
+    pdf.cell(0, 5, _latin("Softara Tech  |  contact@softara.tech  |  softara.tech"), align="C")
 
-    return bytes(pdf.output())
+    out = pdf.output()
+    return bytes(out) if isinstance(out, (bytes, bytearray)) else out.encode("latin-1")
 
 
 def create_app():
@@ -362,10 +402,15 @@ def create_app():
 
         # Reponse client — meme si le mail echoue plus tard, le devis est sauvegarde
         try:
-            payload = q.to_dict()
+            payload = q.to_dict(include_token=True)
+            payload["pdf_url"] = f"/api/quotations/{q.id}/pdf?token={q.access_token}"
         except Exception:
             logger.exception("to_dict() a echoue, fallback payload minimal")
-            payload = {"id": q.id, "name": q.name, "email": q.email}
+            payload = {
+                "id": q.id, "name": q.name, "email": q.email,
+                "access_token": q.access_token,
+                "pdf_url": f"/api/quotations/{q.id}/pdf?token={q.access_token}",
+            }
 
         return jsonify({"ok": True, "quotation": payload}), 201
 
@@ -396,18 +441,49 @@ def create_app():
     @app.get("/api/admin/quotations")
     @require_admin
     def admin_list_quotations():
-        rows = Quotation.query.order_by(Quotation.created_at.desc()).all()
-        return jsonify([r.to_dict() for r in rows])
+        try:
+            page = max(1, int(request.args.get("page", 1)))
+        except (TypeError, ValueError):
+            page = 1
+        try:
+            per_page = int(request.args.get("per_page", 10))
+        except (TypeError, ValueError):
+            per_page = 10
+        per_page = max(1, min(per_page, 100))
+
+        q = Quotation.query.order_by(Quotation.created_at.desc())
+        total = q.count()
+        rows = q.offset((page - 1) * per_page).limit(per_page).all()
+        pages = (total + per_page - 1) // per_page if total else 1
+        return jsonify({
+            "items": [r.to_dict() for r in rows],
+            "total": total,
+            "page": page,
+            "per_page": per_page,
+            "pages": pages,
+        })
+
+    @app.get("/api/admin/quotations/<int:qid>")
+    @require_admin
+    def admin_get_quotation(qid):
+        q = Quotation.query.get_or_404(qid)
+        return jsonify(q.to_dict(include_token=True))
 
     @app.get("/api/admin/quotations/<int:qid>/pdf")
     @require_admin
     def admin_download_quotation(qid):
         q = Quotation.query.get_or_404(qid)
-        pdf_bytes = _generate_quotation_pdf(q)
-        response = make_response(pdf_bytes)
-        response.headers["Content-Type"] = "application/pdf"
-        response.headers["Content-Disposition"] = f'attachment; filename="devis-{qid}.pdf"'
-        return response
+        return _pdf_response(q, qid)
+
+    @app.get("/api/quotations/<int:qid>/pdf")
+    def public_download_quotation(qid):
+        token = (request.args.get("token") or "").strip()
+        if not token:
+            return jsonify({"ok": False, "error": "Token requis"}), 401
+        q = Quotation.query.get_or_404(qid)
+        if not secrets.compare_digest(q.access_token or "", token):
+            return jsonify({"ok": False, "error": "Token invalide"}), 403
+        return _pdf_response(q, qid)
 
     @app.route("/assets/<path:path>")
     def serve_assets(path):
@@ -432,6 +508,7 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+        _migrate_access_token()
 
     logger.info(
         "Softara demarre. SMTP host=%s port=%s security=%s configured=%s",

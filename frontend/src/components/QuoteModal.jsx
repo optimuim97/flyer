@@ -114,7 +114,19 @@ export default function QuoteModal({ onClose }) {
                 Votre demande <b>#{submitted.id}</b> a bien été enregistrée.<br />
                 Nous revenons vers vous sous 48h ouvrées.
               </p>
-              <button className="btn btn-primary" onClick={onClose}>Fermer</button>
+              {submitted.pdf_url && (
+                <a
+                  className="btn btn-primary"
+                  href={submitted.pdf_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  download={`devis-${submitted.id}.pdf`}
+                  style={{ marginBottom: 10, textDecoration: "none", display: "inline-block" }}
+                >
+                  Télécharger le récapitulatif PDF
+                </a>
+              )}
+              <button className="btn btn-ghost" onClick={onClose}>Fermer</button>
             </div>
           ) : step === 1 ? (
             <>

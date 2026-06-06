@@ -15,8 +15,13 @@ function formatDate(iso) {
     + " " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
 
+const PER_PAGE = 10;
+
 export default function AdminDashboard() {
   const [quotations, setQuotations] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState(null);
@@ -26,19 +31,29 @@ export default function AdminDashboard() {
 
   const fetchQuotations = useCallback(async () => {
     if (!token) { navigate("/admin"); return; }
+    setLoading(true);
     try {
-      const res = await fetch("/api/admin/quotations", {
+      const res = await fetch(`/api/admin/quotations?page=${page}&per_page=${PER_PAGE}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) { navigate("/admin"); return; }
       const data = await res.json();
-      setQuotations(Array.isArray(data) ? data : []);
+      // compat : ancienne API renvoyait un tableau
+      if (Array.isArray(data)) {
+        setQuotations(data);
+        setTotal(data.length);
+        setPages(1);
+      } else {
+        setQuotations(Array.isArray(data.items) ? data.items : []);
+        setTotal(data.total ?? 0);
+        setPages(data.pages ?? 1);
+      }
     } catch {
       setError("Erreur de chargement des devis");
     } finally {
       setLoading(false);
     }
-  }, [token, navigate]);
+  }, [token, navigate, page]);
 
   useEffect(() => { fetchQuotations(); }, [fetchQuotations]);
 
@@ -85,7 +100,7 @@ export default function AdminDashboard() {
       <main className="admin-main">
         <div className="admin-section-header">
           <h2>Demandes de devis</h2>
-          <span className="admin-badge">{quotations.length}</span>
+          <span className="admin-badge">{total}</span>
         </div>
 
         {loading && <div className="admin-loading">Chargement…</div>}
@@ -142,6 +157,28 @@ export default function AdminDashboard() {
                 ))}
               </tbody>
             </table>
+
+            {pages > 1 && (
+              <div className="admin-pagination">
+                <button
+                  className="admin-btn-ghost"
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page <= 1 || loading}
+                >
+                  ← Précédent
+                </button>
+                <span className="admin-pagination-info">
+                  Page {page} / {pages} — {total} demande{total > 1 ? "s" : ""}
+                </span>
+                <button
+                  className="admin-btn-ghost"
+                  onClick={() => setPage(p => Math.min(pages, p + 1))}
+                  disabled={page >= pages || loading}
+                >
+                  Suivant →
+                </button>
+              </div>
+            )}
           </div>
         )}
 
