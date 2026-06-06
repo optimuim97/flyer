@@ -695,13 +695,32 @@ button { font: inherit; cursor: pointer; }
 .admin-status-traite { background: rgba(100,220,100,.12); color: #6dc96d; }
 .admin-status-archive { background: var(--surface-2); color: var(--muted); }
 
-/* Detail panel */
+/* Detail panel (modal) */
+.admin-detail-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+  animation: admin-detail-fade .15s ease-out;
+}
+@keyframes admin-detail-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 .admin-detail {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 28px;
-  margin-top: 4px;
+  width: min(720px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .4);
 }
 .admin-detail-header {
   display: flex;

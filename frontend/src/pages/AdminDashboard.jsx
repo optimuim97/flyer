@@ -57,6 +57,18 @@ export default function AdminDashboard() {
 
   useEffect(() => { fetchQuotations(); }, [fetchQuotations]);
 
+  useEffect(() => {
+    if (selected === null) return;
+    const onKey = (e) => e.key === "Escape" && setSelected(null);
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [selected]);
+
   function handleLogout() {
     localStorage.removeItem("admin-token");
     navigate("/admin");
@@ -186,7 +198,8 @@ export default function AdminDashboard() {
           const q = quotations.find(x => x.id === selected);
           if (!q) return null;
           return (
-            <div className="admin-detail">
+            <div className="admin-detail-backdrop" onClick={() => setSelected(null)}>
+            <div className="admin-detail" onClick={e => e.stopPropagation()}>
               <div className="admin-detail-header">
                 <h3>Devis #{q.id} — {q.name}</h3>
                 <button className="admin-btn-ghost" onClick={() => setSelected(null)}>Fermer</button>
@@ -242,6 +255,7 @@ export default function AdminDashboard() {
                   {downloading === q.id ? "Téléchargement…" : "Télécharger le PDF"}
                 </button>
               </div>
+            </div>
             </div>
           );
         })()}
